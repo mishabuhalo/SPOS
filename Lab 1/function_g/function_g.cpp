@@ -3,6 +3,7 @@
 #include <iostream>
 #include <windows.h>
 #include <conio.h>
+#include <string>
 
 using namespace std;
 
@@ -28,6 +29,15 @@ int main()
 
 	ReadFile(hPipe, BuffForServer, NumBytesToRead, &NumBytesToRead, NULL);
 	cout << "Child G recived from server: ";
-	for (i = 0; i < NumBytesToRead; i++) printf("%c", BuffForServer[i]);
-	cout << endl;
+	int Value = atoi(BuffForServer);
+
+	
+	cout << Value << endl;
+	Value = Value * 5 - 20;
+
+	string tmp = to_string(Value);
+	const char *Result = tmp.c_str();
+
+	WriteFile(hPipe, Result, strlen(Result), &NumBytesToWrite, NULL);
+
 }

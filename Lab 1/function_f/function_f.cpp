@@ -5,11 +5,13 @@
 #include <iostream>
 #include <stdio.h>
 #include <Windows.h>
+#include <string>
 
 using namespace std;
 
 int main()
 {
+
 	HANDLE hPipe;
 	wstring PipeAdress(L"\\\\.\\pipe\\MyPipe");
 	LPTSTR PipeName = &PipeAdress[0];
@@ -30,7 +32,17 @@ int main()
 
 	ReadFile(hPipe, BuffForServer, NumBytesToRead, &NumBytesToRead, NULL);
 	cout << "Child F recived from server: ";
-	for (i = 0; i < NumBytesToRead; i++) printf("%c", BuffForServer[i]);
-	cout << endl;
+	int Value = atoi(BuffForServer);
+
+	cout << Value << endl;
+
+	Value = Value * 5 - 10;
+
+	string tmp = to_string(Value);
+	const char *Result = tmp.c_str();
+	
+	WriteFile(hPipe, Result, strlen(Result), &NumBytesToWrite, NULL);
+
+
 	
 }

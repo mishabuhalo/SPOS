@@ -37,6 +37,11 @@ void CreateProcessForFunctions(PROCESS_INFORMATION piProcInfo, STARTUPINFO SI, L
 		printf("create client process: error code %d\n", (int)GetLastError());
 	}
 }
+
+int MinimumFunction(int ValueF, int ValueG)
+{
+	return min(ValueF, ValueG);
+}
 int main()
 {
 	PROCESS_INFORMATION piProcInfoF;
@@ -46,13 +51,14 @@ int main()
 	HANDLE hPipeF = NULL;
 	wstring PipeAdressF(L"\\\\.\\pipe\\MyPipe");
 	LPTSTR PipeNameF = &PipeAdressF[0];
+	char BuffToReadF[255];
+	DWORD iNumBytesToReadF = 255, i;
 
 	ZeroMemory(&SIF, sizeof(STARTUPINFO));
 	SIF.cb = sizeof(STARTUPINFO);
 	ZeroMemory(&piProcInfoF, sizeof(piProcInfoF));
 
-	/*char Buff[255];
-	DWORD iNumBytesToRead = 255, i;*/
+	
 
 	hPipeF = CreateNamedPipeForFunctions(piProcInfoF, SIF, hPipeF, PipeNameF);
 	CreateProcessForFunctions(piProcInfoF, SIF, ClientNameF);
@@ -70,6 +76,8 @@ int main()
 	HANDLE hPipeG = NULL;
 	wstring PipeAdressForForFunctionG(L"\\\\.\\pipe\\MyPipeForG");
 	LPTSTR PipeNameG = &PipeAdressForForFunctionG[0];
+	char BuffToReadG[255];
+	DWORD iNumBytesToReadG = 255, k;
 
 	ZeroMemory(&SIG, sizeof(STARTUPINFO));
 	SIG.cb = sizeof(STARTUPINFO);
@@ -78,15 +86,34 @@ int main()
 	hPipeG = CreateNamedPipeForFunctions(piProcInfoG, SIG, hPipeG, PipeNameG);
 	CreateProcessForFunctions(piProcInfoG, SIG, ClientNameG);
 
-	char BuffToClient[] = "Message from server For F";
-	char BuffToClientG[] = "Message from server For G";
+	char BuffToClient[] = "12";
+
+	char BuffToClientG[] = "5";
+
 	DWORD NumBytesToWriteToCliForG;
 	DWORD NumBytesToWriteToCli;
+
 	WriteFile(hPipeF, BuffToClient, strlen(BuffToClient), &NumBytesToWriteToCli, NULL);
+
 	_getch();
+
 	WriteFile(hPipeG, BuffToClientG, strlen(BuffToClientG), &NumBytesToWriteToCliForG, NULL);
 
+	_getch();
 
-	
+	ReadFile(hPipeF, BuffToReadF, iNumBytesToReadF, &iNumBytesToReadF, NULL);
+	int ValueF = atoi(BuffToReadF);
+	cout << "Server recived from client F number: " << ValueF << endl;
+
+	_getch();
+
+	ReadFile(hPipeG, BuffToReadG, iNumBytesToReadG, &iNumBytesToReadG, NULL);
+	int ValueG = atoi(BuffToReadG);
+	cout << "Server recived from client G number: " << ValueG << endl;
+
+	_getch();
+
+	int minimum = MinimumFunction(ValueF, ValueG);
+	cout << "Minimum value is: " << minimum << endl;
 
 }
