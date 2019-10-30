@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <Windows.h>
 #include <string>
-
+#include "demofuncs"
 using namespace std;
 
 int main()
@@ -31,17 +31,18 @@ int main()
 		NULL);          // нет дополнительных атрибутов 
 
 	ReadFile(hPipe, BuffForServer, NumBytesToRead, &NumBytesToRead, NULL);
+
 	cout << "Child F recived from server: ";
 	int Value = atoi(BuffForServer);
 
 	cout << Value << endl;
 
-	Value = Value * 5 - 10;
+	int result = spos::lab1::demo::f_func<spos::lab1::demo::INT>(Value);
 
-	string tmp = to_string(Value);
-	const char *Result = tmp.c_str();
+	string tmp = to_string(result);
+	const char *Final = tmp.c_str();
 	
-	WriteFile(hPipe, Result, strlen(Result), &NumBytesToWrite, NULL);
+	WriteFile(hPipe, Final, strlen(Final), &NumBytesToWrite, NULL);
 
 
 	

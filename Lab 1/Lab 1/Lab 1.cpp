@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <conio.h>
 #include <tchar.h>
-
+#include <string>
 using namespace std;
 HANDLE CreateNamedPipeForFunctions(PROCESS_INFORMATION piProcInfo, STARTUPINFO SI, HANDLE hPipe, LPTSTR PipeName)
 {
@@ -86,34 +86,41 @@ int main()
 	hPipeG = CreateNamedPipeForFunctions(piProcInfoG, SIG, hPipeG, PipeNameG);
 	CreateProcessForFunctions(piProcInfoG, SIG, ClientNameG);
 
-	char BuffToClient[] = "12";
-
-	char BuffToClientG[] = "5";
+	
 
 	DWORD NumBytesToWriteToCliForG;
 	DWORD NumBytesToWriteToCli;
+	int x;
+	while (true)
+	{
+		cout << "Enter value to calculate : ";
+		cin >> x;
 
-	WriteFile(hPipeF, BuffToClient, strlen(BuffToClient), &NumBytesToWriteToCli, NULL);
+		string tmp = to_string(x);
+		const char *BuffToClient = tmp.c_str();
 
-	_getch();
+		WriteFile(hPipeF, BuffToClient, strlen(BuffToClient), &NumBytesToWriteToCli, NULL);
 
-	WriteFile(hPipeG, BuffToClientG, strlen(BuffToClientG), &NumBytesToWriteToCliForG, NULL);
+		_getch();
 
-	_getch();
+		WriteFile(hPipeG, BuffToClient, strlen(BuffToClient), &NumBytesToWriteToCliForG, NULL);
 
-	ReadFile(hPipeF, BuffToReadF, iNumBytesToReadF, &iNumBytesToReadF, NULL);
-	int ValueF = atoi(BuffToReadF);
-	cout << "Server recived from client F number: " << ValueF << endl;
+		_getch();
 
-	_getch();
+		ReadFile(hPipeF, BuffToReadF, iNumBytesToReadF, &iNumBytesToReadF, NULL);
+		int ValueF = atoi(BuffToReadF);
+		cout << "Server recived from client F number: " << ValueF << endl;
 
-	ReadFile(hPipeG, BuffToReadG, iNumBytesToReadG, &iNumBytesToReadG, NULL);
-	int ValueG = atoi(BuffToReadG);
-	cout << "Server recived from client G number: " << ValueG << endl;
+		_getch();
 
-	_getch();
+		ReadFile(hPipeG, BuffToReadG, iNumBytesToReadG, &iNumBytesToReadG, NULL);
+		int ValueG = atoi(BuffToReadG);
+		cout << "Server recived from client G number: " << ValueG << endl;
 
-	int minimum = MinimumFunction(ValueF, ValueG);
-	cout << "Minimum value is: " << minimum << endl;
+		_getch();
+
+		int minimum = MinimumFunction(ValueF, ValueG);
+		cout << "Minimum value is: " << minimum << endl;
+	}
 
 }

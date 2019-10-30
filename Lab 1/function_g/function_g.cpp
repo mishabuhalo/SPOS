@@ -4,7 +4,7 @@
 #include <windows.h>
 #include <conio.h>
 #include <string>
-
+#include "demofuncs"
 using namespace std;
 
 int main()
@@ -32,12 +32,14 @@ int main()
 	int Value = atoi(BuffForServer);
 
 	
+	
 	cout << Value << endl;
-	Value = Value * 5 - 20;
 
-	string tmp = to_string(Value);
-	const char *Result = tmp.c_str();
+	int result = spos::lab1::demo::g_func<spos::lab1::demo::INT>(Value);
 
-	WriteFile(hPipe, Result, strlen(Result), &NumBytesToWrite, NULL);
+	string tmp = to_string(result);
+	const char *Final = tmp.c_str();
+
+	WriteFile(hPipe, Final, strlen(Final), &NumBytesToWrite, NULL);
 
 }
