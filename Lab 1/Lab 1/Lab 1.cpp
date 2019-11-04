@@ -22,17 +22,23 @@ void ShowConsole()
 	::ShowWindow(::GetConsoleWindow(), SW_SHOW);
 }
 
-int updateResult(HANDLE hFile, char lpBuffer[], DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped)
+int updateResult(HANDLE hFile, char lpBuffer[], DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped/*, std::atomic_bool& cancelled*/)
 {
-	ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
-	int result = atoi(lpBuffer);
-	//cout << "This value is " << result << " This thread is " << this_thread::get_id() << endl;;
-	return result;
+	//int result = -1;
+	//while (!cancelled)
+	//{
+		ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
+		int result = atoi(lpBuffer);
+		return result;
+	//}
+
+	//return result;
+	
 }
 
 
-bool CheckEscape(HANDLE hFileF, char lpBufferF[], DWORD nNumberOfBytesToReadF, LPDWORD lpNumberOfBytesReadF, LPOVERLAPPED lpOverlappedF, int *ValueF, int *ValueG,
-				 HANDLE hFileG, char lpBufferG[], DWORD nNumberOfBytesToReadG, LPDWORD lpNumberOfBytesReadG, LPOVERLAPPED lpOverlappedG) {
+bool CheckEscape(HANDLE hFileF, char lpBufferF[], DWORD nNumberOfBytesToReadF, LPDWORD lpNumberOfBytesReadF, LPOVERLAPPED lpOverlappedF, int* ValueF, int* ValueG,
+	HANDLE hFileG, char lpBufferG[], DWORD nNumberOfBytesToReadG, LPDWORD lpNumberOfBytesReadG, LPOVERLAPPED lpOverlappedG) {
 
 	if (GetAsyncKeyState(VK_ESCAPE) == -32767) {
 
@@ -53,8 +59,8 @@ bool CheckEscape(HANDLE hFileF, char lpBufferF[], DWORD nNumberOfBytesToReadF, L
 			printf("create cancelation process: error code %d\n", (int)GetLastError());
 		}
 
-		future<int> tmpf = std::async(std::launch::async, [&]() {return updateResult(hFileF, lpBufferF, nNumberOfBytesToReadF, lpNumberOfBytesReadF,lpOverlappedF); });
-		future<int> tmpg = std::async(std::launch::async, [&]() {return updateResult(hFileG, lpBufferG, nNumberOfBytesToReadG, lpNumberOfBytesReadG, lpOverlappedG); });
+		//future<int> tmpf = std::async(std::launch::async, [&]() {return updateResult(hFileF, lpBufferF, nNumberOfBytesToReadF, lpNumberOfBytesReadF,lpOverlappedF); });
+		//future<int> tmpg = std::async(std::launch::async, [&]() {return updateResult(hFileG, lpBufferG, nNumberOfBytesToReadG, lpNumberOfBytesReadG, lpOverlappedG); });
 
 
 		bool flagF = false;
@@ -67,7 +73,7 @@ bool CheckEscape(HANDLE hFileF, char lpBufferF[], DWORD nNumberOfBytesToReadF, L
 
 			chrono::microseconds span(10);
 
-			if (!flagF && tmpf.wait_for(span) == future_status::ready)
+			/*if (!flagF && tmpf.wait_for(span) == future_status::ready)
 			{
 				*ValueF = tmpf.get();
 				flagF = true;
@@ -77,10 +83,10 @@ bool CheckEscape(HANDLE hFileF, char lpBufferF[], DWORD nNumberOfBytesToReadF, L
 			{
 				*ValueG = tmpg.get();
 				flagG = true;
-			}
+			}*/
+			
 
-
-			if (GetAsyncKeyState(0x59) == -32767 || excode!= STILL_ACTIVE)
+			if (GetAsyncKeyState(0x59) == -32767 || excode != STILL_ACTIVE)
 			{
 				ShowConsole();
 				std::cout << endl << "Abortion complete" << endl;
@@ -88,7 +94,7 @@ bool CheckEscape(HANDLE hFileF, char lpBufferF[], DWORD nNumberOfBytesToReadF, L
 				if (*ValueF != -1)
 					cout << "Function F computed: " << *ValueF << ", function g not" << endl;
 
-				if(*ValueG !=-1)
+				if (*ValueG != -1)
 					cout << "Function G computed: " << *ValueG << ", function f not" << endl;
 
 				TerminateProcess(piProcInfo.hProcess, 0);
@@ -177,19 +183,11 @@ void computing()
 	SIG.cb = sizeof(STARTUPINFO);
 	ZeroMemory(&piProcInfoG, sizeof(piProcInfoG));
 
-
-
-
-
 	DWORD NumBytesToWriteToCliForG;
 	DWORD NumBytesToWriteToCli;
 
-
-
-
-
-
 	hPipeF = CreateNamedPipeForFunctions(piProcInfoF, SIF, hPipeF, PipeNameF);
+
 	CreateProcessForFunctions(piProcInfoF, SIF, ClientNameF);
 
 	if ((ConnectNamedPipe(hPipeF, NULL)) == 0)
@@ -198,10 +196,8 @@ void computing()
 	}
 
 	hPipeG = CreateNamedPipeForFunctions(piProcInfoG, SIG, hPipeG, PipeNameG);
+
 	CreateProcessForFunctions(piProcInfoG, SIG, ClientNameG);
-
-
-
 
 	if ((ConnectNamedPipe(hPipeG, NULL)) == 0)
 	{
@@ -220,15 +216,16 @@ void computing()
 
 	WriteFile(hPipeF, BuffToClient, strlen(BuffToClient), &NumBytesToWriteToCli, NULL);
 
-
 	WriteFile(hPipeG, BuffToClient, strlen(BuffToClient), &NumBytesToWriteToCliForG, NULL);
 
-	future<int> tmpf = std::async(std::launch::async, [&]() {return updateResult(hPipeF, BuffToReadF, iNumBytesToReadF, &iNumBytesToReadF, NULL); });
-	future<int> tmpg = std::async(std::launch::async, [&]() {return updateResult(hPipeG, BuffToReadG, iNumBytesToReadG, &iNumBytesToReadG, NULL); });
+	//std::atomic_bool cancellation_tokenF = false;
+	//std::atomic_bool cancellation_tokenG = false;
+
+	future<int> tmpf = std::async(std::launch::async, [&]() {return updateResult(hPipeF, BuffToReadF, iNumBytesToReadF, &iNumBytesToReadF, NULL/*, std::ref(cancellation_tokenF)*/); });
+	future<int> tmpg = std::async(std::launch::async, [&]() {return updateResult(hPipeG, BuffToReadG, iNumBytesToReadG, &iNumBytesToReadG, NULL/*, std::ref(cancellation_tokenG)*/); });
 
 	bool flagF = false;
 	bool flagG = false;
-
 
 	while (true)
 	{
@@ -236,32 +233,34 @@ void computing()
 		chrono::microseconds span(10);
 		if (!flagF && tmpf.wait_for(span) == future_status::ready)
 		{
+
 			ValueF = tmpf.get();
 			flagF = true;
 		}
 
-		
+
 		if (ValueF == 0)
 		{
 			std::cout << "Value f = 0, stop computing." << endl;
+			//cancellation_tokenF = true;
+			//cancellation_tokenG = true;
 			ValueG = 1;
 			break;
 		}
 
-		
 
 		if (!flagG && tmpg.wait_for(span) == future_status::ready)
 		{
 			ValueG = tmpg.get();
-			
+
 			flagG = true;
 		}
-
 
 		if (ValueG == 0)
 		{
 			std::cout << "Value g = 0, stop computing." << endl;
-			
+			//cancellation_tokenF = true;
+			//cancellation_tokenG = true;
 			ValueF = 1;
 
 			break;
@@ -278,7 +277,7 @@ void computing()
 
 	int minimum = MinimumFunction(ValueF, ValueG);
 	std::cout << "Minimum value is: " << minimum << endl;
-	return;
+
 }
 int main()
 {
