@@ -32,10 +32,10 @@ int main()
 
 	ReadFile(hPipe, BuffForServer, NumBytesToRead, &NumBytesToRead, NULL);
 
-	cout << "Child F recived from server: ";
+	//cout << "Child F recived from server: ";
 	int Value = atoi(BuffForServer);
 
-	cout << Value << endl;
+	//cout << Value << endl;
 
 	int result = spos::lab1::demo::f_func<spos::lab1::demo::INT>(Value);
 
