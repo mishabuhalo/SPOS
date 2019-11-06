@@ -22,17 +22,18 @@ void ShowConsole()
 	::ShowWindow(::GetConsoleWindow(), SW_SHOW);
 }
 
-int updateResult(HANDLE hFile, char lpBuffer[], DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped/*, std::atomic_bool& cancelled*/)
+int updateResult(HANDLE hFile, char lpBuffer[], DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped, std::atomic_bool& cancelled)
 {
-	//int result = -1;
-	//while (!cancelled)
-	//{
+	int result = -1;
+	
+	while (!cancelled)
+	{
 		ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
 		int result = atoi(lpBuffer);
 		return result;
-	//}
+	}
 
-	//return result;
+	return result;
 	
 }
 
@@ -218,11 +219,12 @@ void computing()
 
 	WriteFile(hPipeG, BuffToClient, strlen(BuffToClient), &NumBytesToWriteToCliForG, NULL);
 
-	//std::atomic_bool cancellation_tokenF = false;
-	//std::atomic_bool cancellation_tokenG = false;
+	std::atomic_bool cancellation_tokenF = false;
+	std::atomic_bool cancellation_tokenG = false;
+	
 
-	future<int> tmpf = std::async(std::launch::async, [&]() {return updateResult(hPipeF, BuffToReadF, iNumBytesToReadF, &iNumBytesToReadF, NULL/*, std::ref(cancellation_tokenF)*/); });
-	future<int> tmpg = std::async(std::launch::async, [&]() {return updateResult(hPipeG, BuffToReadG, iNumBytesToReadG, &iNumBytesToReadG, NULL/*, std::ref(cancellation_tokenG)*/); });
+	future<int> tmpf = std::async(std::launch::async, [&]() {return updateResult(hPipeF, BuffToReadF, iNumBytesToReadF, &iNumBytesToReadF, NULL, std::ref(cancellation_tokenF)); });
+	future<int> tmpg = std::async(std::launch::async, [&]() {return updateResult(hPipeG, BuffToReadG, iNumBytesToReadG, &iNumBytesToReadG, NULL, std::ref(cancellation_tokenG)); });
 
 	bool flagF = false;
 	bool flagG = false;
@@ -242,8 +244,8 @@ void computing()
 		if (ValueF == 0)
 		{
 			std::cout << "Value f = 0, stop computing." << endl;
-			//cancellation_tokenF = true;
-			//cancellation_tokenG = true;
+			cancellation_tokenF = true;
+			cancellation_tokenG = true;
 			ValueG = 1;
 			break;
 		}
@@ -259,8 +261,8 @@ void computing()
 		if (ValueG == 0)
 		{
 			std::cout << "Value g = 0, stop computing." << endl;
-			//cancellation_tokenF = true;
-			//cancellation_tokenG = true;
+			cancellation_tokenF = true;
+			cancellation_tokenG = true;
 			ValueF = 1;
 
 			break;
