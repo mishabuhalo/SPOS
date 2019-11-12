@@ -58,6 +58,7 @@ bool CheckEscape(HANDLE hFileF, char lpBufferF[], DWORD nNumberOfBytesToReadF, L
 		wstring CommandLine(L"Cancel_process.exe");
 		LPTSTR ClientName = &CommandLine[0];
 		DWORD excode;
+		DWORD NumBytesToWriteToCli;
 
 		ZeroMemory(&SI, sizeof(STARTUPINFO));
 		SI.cb = sizeof(STARTUPINFO);
@@ -106,12 +107,19 @@ bool CheckEscape(HANDLE hFileF, char lpBufferF[], DWORD nNumberOfBytesToReadF, L
 				{
 					cout << "Function F computed: " << *ValueF << endl;
 					cancellation_tokenG = true;
+					string cancelltmp = to_string(0);
+					const char* BuffToCancell = cancelltmp.c_str();
+					WriteFile(hFileG, BuffToCancell, strlen(BuffToCancell), &NumBytesToWriteToCli, NULL);
+
 				}
 
 				if (*ValueG != -1)
 				{
 					cout << "Function G computed: " << *ValueG << endl;
 					cancellation_tokenF = true;
+					string cancelltmp = to_string(0);
+					const char* BuffToCancell = cancelltmp.c_str();
+					WriteFile(hFileF, BuffToCancell, strlen(BuffToCancell), &NumBytesToWriteToCli, NULL);
 				}
 
 				TerminateProcess(piProcInfo.hProcess, 0);
