@@ -22,19 +22,27 @@ void ShowConsole()
 	::ShowWindow(::GetConsoleWindow(), SW_SHOW);
 }
 
+
 int updateResult(HANDLE hFile, char lpBuffer[], DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped, std::atomic_bool& cancelled)
 {
 	int result = -1;
-	
-	while (!cancelled)
+	if (!cancelled)
 	{
 		ReadFile(hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
 		int result = atoi(lpBuffer);
 		return result;
 	}
-
 	return result;
-	
+
+}
+
+void clearPipes(HANDLE hPipeF, HANDLE hPipeG, PROCESS_INFORMATION piProcInfoF, PROCESS_INFORMATION piProcInfoG)
+{
+	DisconnectNamedPipe(hPipeG);
+	//CloseHandle(hPipeG);
+	DisconnectNamedPipe(hPipeF);
+	TerminateProcess(piProcInfoF.hProcess, 0);
+	TerminateProcess(piProcInfoG.hProcess, 0);
 }
 
 
@@ -59,9 +67,11 @@ bool CheckEscape(HANDLE hFileF, char lpBufferF[], DWORD nNumberOfBytesToReadF, L
 		{
 			printf("create cancelation process: error code %d\n", (int)GetLastError());
 		}
+		std::atomic_bool cancellation_tokenF = false;
+		std::atomic_bool cancellation_tokenG = false;
 
-		//future<int> tmpf = std::async(std::launch::async, [&]() {return updateResult(hFileF, lpBufferF, nNumberOfBytesToReadF, lpNumberOfBytesReadF,lpOverlappedF); });
-		//future<int> tmpg = std::async(std::launch::async, [&]() {return updateResult(hFileG, lpBufferG, nNumberOfBytesToReadG, lpNumberOfBytesReadG, lpOverlappedG); });
+		future<int> tmpf = std::async(std::launch::async, [&]() {return updateResult(hFileF, lpBufferF, nNumberOfBytesToReadF, lpNumberOfBytesReadF,lpOverlappedF, cancellation_tokenF); });
+		future<int> tmpg = std::async(std::launch::async, [&]() {return updateResult(hFileG, lpBufferG, nNumberOfBytesToReadG, lpNumberOfBytesReadG, lpOverlappedG, cancellation_tokenG); });
 
 
 		bool flagF = false;
@@ -74,7 +84,7 @@ bool CheckEscape(HANDLE hFileF, char lpBufferF[], DWORD nNumberOfBytesToReadF, L
 
 			chrono::microseconds span(10);
 
-			/*if (!flagF && tmpf.wait_for(span) == future_status::ready)
+			if (!flagF && tmpf.wait_for(span) == future_status::ready)
 			{
 				*ValueF = tmpf.get();
 				flagF = true;
@@ -84,7 +94,7 @@ bool CheckEscape(HANDLE hFileF, char lpBufferF[], DWORD nNumberOfBytesToReadF, L
 			{
 				*ValueG = tmpg.get();
 				flagG = true;
-			}*/
+			}
 			
 
 			if (GetAsyncKeyState(0x59) == -32767 || excode != STILL_ACTIVE)
@@ -93,10 +103,16 @@ bool CheckEscape(HANDLE hFileF, char lpBufferF[], DWORD nNumberOfBytesToReadF, L
 				std::cout << endl << "Abortion complete" << endl;
 
 				if (*ValueF != -1)
-					cout << "Function F computed: " << *ValueF << ", function g not" << endl;
+				{
+					cout << "Function F computed: " << *ValueF << endl;
+					cancellation_tokenG = true;
+				}
 
 				if (*ValueG != -1)
-					cout << "Function G computed: " << *ValueG << ", function f not" << endl;
+				{
+					cout << "Function G computed: " << *ValueG << endl;
+					cancellation_tokenF = true;
+				}
 
 				TerminateProcess(piProcInfo.hProcess, 0);
 				return true;
@@ -121,7 +137,8 @@ HANDLE CreateNamedPipeForFunctions(PROCESS_INFORMATION piProcInfo, STARTUPINFO S
 
 	hPipe = CreateNamedPipe(
 		PipeName,			   // имя канала
-		PIPE_ACCESS_DUPLEX,       // чтение и запись из канала
+		PIPE_ACCESS_DUPLEX |
+		FILE_FLAG_OVERLAPPED,       // чтение и запись из канала
 		PIPE_TYPE_MESSAGE |       // передача сообщений по каналу
 		PIPE_READMODE_MESSAGE |   // режим чтения сообщений 
 		PIPE_WAIT,                // синхронная передача сообщений 
@@ -235,8 +252,9 @@ void computing()
 		chrono::microseconds span(10);
 		if (!flagF && tmpf.wait_for(span) == future_status::ready)
 		{
-
 			ValueF = tmpf.get();
+			cout << "Value F computed: " << ValueF << endl;
+
 			flagF = true;
 		}
 
@@ -244,8 +262,15 @@ void computing()
 		if (ValueF == 0)
 		{
 			std::cout << "Value f = 0, stop computing." << endl;
-			cancellation_tokenF = true;
+
 			cancellation_tokenG = true;
+
+			string cancelltmp = to_string(0);
+			const char* BuffToCancell = cancelltmp.c_str();
+			WriteFile(hPipeG, BuffToCancell, strlen(BuffToCancell), &NumBytesToWriteToCli, NULL);
+
+			//clearPipes(hPipeF, hPipeG, piProcInfoF, piProcInfoG);
+
 			ValueG = 1;
 			break;
 		}
@@ -254,7 +279,7 @@ void computing()
 		if (!flagG && tmpg.wait_for(span) == future_status::ready)
 		{
 			ValueG = tmpg.get();
-
+			cout << "Value G computed: " << ValueG << endl;
 			flagG = true;
 		}
 
@@ -262,7 +287,14 @@ void computing()
 		{
 			std::cout << "Value g = 0, stop computing." << endl;
 			cancellation_tokenF = true;
-			cancellation_tokenG = true;
+			string cancelltmp = to_string(0);
+			const char* BuffToCancell = cancelltmp.c_str();
+
+			WriteFile(hPipeF, BuffToCancell, strlen(BuffToCancell), &NumBytesToWriteToCli, NULL);
+
+			//clearPipes(hPipeF, hPipeG, piProcInfoF, piProcInfoG);
+
+
 			ValueF = 1;
 
 			break;
@@ -273,12 +305,14 @@ void computing()
 			std::cout << "Value f = " << ValueF << ", Value G = " << ValueG << endl;
 			break;
 		}
+
 		if (CheckEscape(hPipeF, BuffToReadF, iNumBytesToReadF, &iNumBytesToReadF, NULL, &ValueF, &ValueG, hPipeG, BuffToReadG, iNumBytesToReadG, &iNumBytesToReadG, NULL))
 			return;
 	}
 
 	int minimum = MinimumFunction(ValueF, ValueG);
 	std::cout << "Minimum value is: " << minimum << endl;
+
 
 }
 int main()
