@@ -33,17 +33,8 @@ int updateResult(HANDLE hFile, char lpBuffer[], DWORD nNumberOfBytesToRead, LPDW
 		return result;
 	}
 	return result;
-
 }
 
-void clearPipes(HANDLE hPipeF, HANDLE hPipeG, PROCESS_INFORMATION piProcInfoF, PROCESS_INFORMATION piProcInfoG)
-{
-	DisconnectNamedPipe(hPipeG);
-	//CloseHandle(hPipeG);
-	DisconnectNamedPipe(hPipeF);
-	TerminateProcess(piProcInfoF.hProcess, 0);
-	TerminateProcess(piProcInfoG.hProcess, 0);
-}
 
 
 bool CheckEscape(HANDLE hFileF, char lpBufferF[], DWORD nNumberOfBytesToReadF, LPDWORD lpNumberOfBytesReadF, LPOVERLAPPED lpOverlappedF, int* ValueF, int* ValueG,
@@ -101,7 +92,7 @@ bool CheckEscape(HANDLE hFileF, char lpBufferF[], DWORD nNumberOfBytesToReadF, L
 			if (GetAsyncKeyState(0x59) == -32767 || excode != STILL_ACTIVE)
 			{
 				ShowConsole();
-				std::cout << endl << "Abortion complete" << endl;
+				std::cout << endl << "Application stopped by user!" << endl;
 
 				if (*ValueF != -1)
 				{
@@ -111,6 +102,13 @@ bool CheckEscape(HANDLE hFileF, char lpBufferF[], DWORD nNumberOfBytesToReadF, L
 					const char* BuffToCancell = cancelltmp.c_str();
 					WriteFile(hFileG, BuffToCancell, strlen(BuffToCancell), &NumBytesToWriteToCli, NULL);
 
+				}
+				else
+				{
+					cancellation_tokenG = true;
+					string cancelltmp = to_string(0);
+					const char* BuffToCancell = cancelltmp.c_str();
+					WriteFile(hFileF, BuffToCancell, strlen(BuffToCancell), &NumBytesToWriteToCli, NULL);
 				}
 
 				if (*ValueG != -1)
@@ -122,6 +120,14 @@ bool CheckEscape(HANDLE hFileF, char lpBufferF[], DWORD nNumberOfBytesToReadF, L
 					WriteFile(hFileF, BuffToCancell, strlen(BuffToCancell), &NumBytesToWriteToCli, NULL);
 				}
 
+				else
+				{
+					cancellation_tokenG = true;
+					string cancelltmp = to_string(0);
+					const char* BuffToCancell = cancelltmp.c_str();
+					WriteFile(hFileG, BuffToCancell, strlen(BuffToCancell), &NumBytesToWriteToCli, NULL);
+				}
+
 				TerminateProcess(piProcInfo.hProcess, 0);
 				return true;
 			}
@@ -129,7 +135,7 @@ bool CheckEscape(HANDLE hFileF, char lpBufferF[], DWORD nNumberOfBytesToReadF, L
 			{
 				TerminateProcess(piProcInfo.hProcess, 0);
 				ShowConsole();
-				std::cout << endl << "Abortion stopped by user!" << endl;
+				std::cout << endl << "Application continues computing." << endl;
 				break;
 			}
 		}
@@ -261,7 +267,6 @@ void computing()
 		if (!flagF && tmpf.wait_for(span) == future_status::ready)
 		{
 			ValueF = tmpf.get();
-			cout << "Value F computed: " << ValueF << endl;
 
 			flagF = true;
 		}
@@ -277,7 +282,6 @@ void computing()
 			const char* BuffToCancell = cancelltmp.c_str();
 			WriteFile(hPipeG, BuffToCancell, strlen(BuffToCancell), &NumBytesToWriteToCli, NULL);
 
-			//clearPipes(hPipeF, hPipeG, piProcInfoF, piProcInfoG);
 
 			ValueG = 1;
 			break;
@@ -287,7 +291,6 @@ void computing()
 		if (!flagG && tmpg.wait_for(span) == future_status::ready)
 		{
 			ValueG = tmpg.get();
-			cout << "Value G computed: " << ValueG << endl;
 			flagG = true;
 		}
 
@@ -299,8 +302,6 @@ void computing()
 			const char* BuffToCancell = cancelltmp.c_str();
 
 			WriteFile(hPipeF, BuffToCancell, strlen(BuffToCancell), &NumBytesToWriteToCli, NULL);
-
-			//clearPipes(hPipeF, hPipeG, piProcInfoF, piProcInfoG);
 
 
 			ValueF = 1;
