@@ -1,0 +1,12 @@
+Scheduling Type: Batch (preemptive)
+Scheduling Name: Shortest remaining time first
+
+Simulation Run Time: 5000
+Mean: 1100
+Standard Deviation: 510
+Process #	CPU Time	IO Blocking	CPU Completed	CPU Blocked
+0		1218 (ms)	100 (ms)	400 (ms)	4 times
+1		984 (ms)	500 (ms)	984 (ms)	1 times
+2		1480 (ms)	30 (ms)		120 (ms)	4 times
+3		952 (ms)	400 (ms)	952 (ms)	2 times
+4		1690 (ms)	600 (ms)	600 (ms)	1 times
